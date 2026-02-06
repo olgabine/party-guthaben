@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Party Guthaben Test 2</title>
+<style>
+body { font-family: Arial, sans-serif; margin:20px; }
+button { padding:14px 22px; margin:6px; font-size:16px; }
+#qr-reader { width:320px; margin-top:15px; }
+#gast { margin-top:20px; display:none; }
+#produkte { margin-top:15px; }
+#status { font-weight:bold; margin-top:10px; }
+</style>
+</head>
+
+<body>
+
+<h2>Party Guthaben Test 2</h2>
+
+<button id="scanBtn" onclick="startScan()">QR-Code scannen</button>
+<div id="qr-reader"></div>
+
+<div id="status"></div>
+
+<div id="gast">
+  <h3 id="name">Gast</h3>
+  <p><b>Guthaben:</b> <span id="guthaben">0.00</span> €</p>
+
+  <button onclick="aufladen()">Aufladen</button>
+  <button onclick="auszahlen()">Auszahlen</button>
+
+  <div id="produkte"></div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+const APP_PIN = "739284";
+
+/* PIN-Abfrage */
+const pin = prompt("6-stellige PIN eingeben:");
+if(pin !== APP_PIN){
+  document.body.innerHTML="<h2>Zugriff verweigert</h2>";
+  throw new Error("Falscher PIN");
+}
+
+/* STATUS */
+let guthaben = 20; // Startguthaben für Test
+document.getElementById('guthaben').textContent = guthaben.toFixed(2);
+document.getElementById('gast').style.display = 'block';
+
+/* QR SCAN */
+let scanner = null;
+function startScan(){
+  if(scanner) return;
+  scanner = new Html5Qrcode("qr-reader");
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    text=>{
+      alert("QR-Code erkannt: " + text);
+      scanner.stop().then(()=>scanner.clear());
+      document.getElementById('name').textContent = text;
+    }
+  );
+}
+
+/* Buttons für Testaktionen */
+function aufladen(){
+  let v = parseFloat(prompt("Betrag aufladen (€):", "10"));
+  if(v){
+    guthaben += v;
+    document.getElementById('guthaben').textContent = guthaben.toFixed(2);
+  }
+}
+
+function auszahlen(){
+  if(confirm("Restguthaben auszahlen?")){
+    guthaben = 0;
+    document.getElementById('guthaben').textContent = guthaben.toFixed(2);
+  }
+}
+
+/* Testprodukte */
+const testProdukte = [
+  {name:"Bier", preis:3.50},
+  {name:"Wasser", preis:1.00},
+  {name:"Cocktail", preis:5.50}
+];
+
+function renderProdukte(){
+  const div = document.getElementById('produkte');
+  div.innerHTML = "<h4>Produkte</h4>";
+  testProdukte.forEach(p=>{
+    const b = document.createElement('button');
+    b.textContent = `${p.name} – ${p.preis.toFixed(2)} €`;
+    b.onclick = ()=>{
+      if(guthaben >= p.preis){
+        guthaben -= p.preis;
+        document.getElementById('guthaben').textContent = guthaben.toFixed(2);
+        alert(p.name + " gebucht!");
+      } else {
+        alert("Nicht genug Guthaben!");
+      }
+    };
+    div.appendChild(b);
+  });
+}
+
+renderProdukte();
+</script>
+
+</body>
+</html>
