@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Party Guthaben Test</title>
+</head>
+<body>
+<h2>Party Guthaben Test</h2>
+<script>
+const APP_PIN = "739284";
+const pin = prompt("6-stellige PIN eingeben:");
+if(pin !== APP_PIN){
+  document.body.innerHTML="<h2>Zugriff verweigert</h2>";
+  throw new Error("Falscher PIN");
+}
+document.body.innerHTML += "<p>PIN korrekt – JS läuft!</p>";
+</script>
+</body>
+</html>
