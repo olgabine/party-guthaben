@@ -8,7 +8,7 @@ body { font-family: Arial, sans-serif; margin:20px; }
 button { padding:14px 22px; margin:6px; font-size:16px; }
 button:disabled { opacity:0.4; }
 #qr-reader { width:320px; margin-top:15px; }
-#gast { margin-top:20px; }
+#gast { margin-top:20px; display:none; }
 #produkte { margin-top:15px; }
 #status { font-weight:bold; margin-top:10px; }
 </style>
@@ -18,12 +18,12 @@ button:disabled { opacity:0.4; }
 
 <h2>Party Guthaben</h2>
 
-<button onclick="startScan()">QR-Code scannen</button>
+<button id="scanBtn" onclick="startScan()" style="display:none;">QR-Code scannen</button>
 <div id="qr-reader"></div>
 
 <div id="status"></div>
 
-<div id="gast" style="display:none;">
+<div id="gast">
   <h3 id="name"></h3>
   <p><b>Guthaben:</b> <span id="guthaben"></span> €</p>
 
@@ -39,15 +39,14 @@ button:disabled { opacity:0.4; }
    🔐 PIN-SCHUTZ
    ======================= */
 const APP_PIN = "739284";
-
-if (!localStorage.getItem("pin_ok")) {
-  const pin = prompt("6-stelligen PIN eingeben:");
-  if (pin !== APP_PIN) {
-    document.body.innerHTML = "<h2>Zugriff verweigert</h2>";
+(function checkPIN(){
+  const pin = prompt("6-stellige PIN eingeben:");
+  if(pin !== APP_PIN){
+    document.body.innerHTML="<h2>Zugriff verweigert</h2>";
     throw new Error("Falscher PIN");
   }
-  localStorage.setItem("pin_ok", "1");
-}
+  document.getElementById('scanBtn').style.display='inline-block';
+})();
 
 /* =======================
    KONFIG
@@ -58,7 +57,6 @@ const sheetUrl =
 let currentId = '';
 let guthaben = 0;
 let scanner = null;
-
 let offlineQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
 
 /* =======================
@@ -66,9 +64,7 @@ let offlineQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
    ======================= */
 function updateStatus(){
   document.getElementById('status').textContent =
-    navigator.onLine
-    ? '🟢 Online'
-    : '🔴 Offline – Buchungen werden gespeichert';
+    navigator.onLine ? '🟢 Online' : '🔴 Offline – Buchungen werden gespeichert';
 }
 window.addEventListener('online', syncOffline);
 window.addEventListener('offline', updateStatus);
@@ -83,7 +79,7 @@ function startScan(){
   scanner.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
-    text => {
+    text=>{
       currentId = text.trim();
       scanner.stop().then(()=>scanner.clear());
       loadGast();
