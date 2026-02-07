@@ -10,9 +10,9 @@ body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 15px;
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  background: linear-gradient(135deg,#0b1f4a,#0f286e);
   color: #fff;
-  overflow-x: hidden; /* Kein horizontales Scrollen */
+  overflow-x: hidden;
 }
 
 h1, h2 {
@@ -30,33 +30,31 @@ h1, h2 {
 /* ===== Buttons ===== */
 button {
   display: block;
-  width: 90%;       /* passt sich Smartphone-Bildschirm an */
-  max-width: 320px;
-  margin: 6px auto;
-  padding: 14px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-}
-
-.button-green { background-color: #2ecc71; color: #000; }
-.button-red   { background-color: #e74c3c; color: #000; }
-.button-orange{ background-color: #f39c12; color: #000; }
-
-/* ===== QR Reader ===== */
-#qr-reader {
   width: 90%;
   max-width: 320px;
-  margin: 10px auto;
+  margin: 8px auto;
+  padding: 16px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  transition: transform 0.1s;
 }
+button:active { transform: scale(0.97); }
+
+/* Farbverläufe für Buttons */
+.button-green { background: linear-gradient(45deg,#2ecc71,#27ae60);}
+.button-red   { background: linear-gradient(45deg,#e74c3c,#c0392b);}
+.button-orange{ background: linear-gradient(45deg,#f39c12,#d35400);}
+
+/* ===== QR Reader ===== */
+#qr-reader { width: 90%; max-width: 320px; margin: 10px auto; }
 
 /* ===== Gastbereich ===== */
-#gast {
-  display: none;
-  margin-top: 20px;
-  text-align: center;
-}
+#gast { display: none; margin-top: 20px; text-align: center; }
 
 textarea {
   width: 90%;
@@ -78,28 +76,20 @@ textarea {
   max-width: 320px;
   text-align: left;
 }
-
-#warenkorb li {
-  margin-bottom: 6px;
-  word-wrap: break-word; /* lange Namen umbrechen */
-}
-
+#warenkorb li { margin-bottom: 8px; word-wrap: break-word; }
 #warenkorb li button {
-  padding: 2px 6px;
-  font-size: 14px;
+  padding: 6px 10px;
+  font-size: 16px;
   margin-left: 6px;
+  border-radius: 6px;
 }
 
 /* ===== Produkte ===== */
-#produkte h2 {
-  margin: 10px 0 5px 0;
-}
-
-#produkte button {
-  width: 90%;
-  max-width: 320px;
-  margin: 4px auto;
-}
+#produkte { margin-top: 15px; }
+.produkt-titel { margin: 10px 0 5px 0; font-weight: bold; text-align: center; }
+.preis-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.preis-btn { flex: 1 1 calc(45%); min-width: 100px; padding: 14px; font-size: 18px; border-radius: 10px; border: none; cursor: pointer; color: #fff; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s; }
+.preis-btn:active { transform: scale(0.97); }
 </style>
 </head>
 <body>
@@ -131,10 +121,16 @@ textarea {
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
-/* ===== PIN ===== */
+/* ===== PIN & Inaktivität ===== */
 const APP_PIN="739284";
-const pin=prompt("6-stellige PIN eingeben:");
-if(pin!==APP_PIN){document.body.innerHTML="<h2>Zugriff verweigert</h2>"; throw new Error("Falscher PIN");}
+let lastActivity=Date.now();
+function promptPIN(){
+  const pin=prompt("6-stellige PIN eingeben:");
+  if(pin!==APP_PIN){document.body.innerHTML="<h2>Zugriff verweigert</h2>"; throw new Error("Falscher PIN");}
+}
+promptPIN();
+/* 5 Minuten Inaktivität */
+setInterval(()=>{if(Date.now()-lastActivity>5*60*1000) promptPIN();},60000);
 
 /* ===== STATE ===== */
 let currentId="";
@@ -159,6 +155,7 @@ window.addEventListener("offline",updateStatus);
 
 /* ===== QR SCAN ===== */
 function startScan(){
+  lastActivity=Date.now();
   if(scanner) return;
   scanner = new Html5Qrcode("qr-reader");
   scanner.start({facingMode:"environment"},{fps:10,qrbox:250},text=>{
@@ -170,7 +167,9 @@ function startScan(){
   });
 }
 
+/* ===== GAST ANZEIGE ===== */
 function showGast(){
+  lastActivity=Date.now();
   const gast=gaeste[currentId];
   document.getElementById("name").textContent=currentId;
   document.getElementById("guthaben").textContent=gast.guthaben.toFixed(2);
@@ -180,29 +179,37 @@ function showGast(){
   updateWarenkorb();
 }
 
-/* ===== PRODUKTE ===== */
+/* ===== PRODUKTE RENDERN (Dropdown-artig 2 Preise) ===== */
 function renderProdukte(){
   const div=document.getElementById("produkte");
   div.innerHTML="";
   produkte.forEach(p=>{
-    const title=document.createElement("h2");
+    const title=document.createElement("div");
+    title.className="produkt-titel";
     title.textContent=p.name;
     div.appendChild(title);
-    p.preise.forEach(preis=>{
-      const b=document.createElement("button");
-      b.className="button-orange";
-      b.textContent=`${preis.toFixed(2)} €`;
-      b.onclick=()=>{
-        gaeste[currentId].warenkorb.push({name:p.name, preis, menge:1});
-        updateWarenkorb();
-      };
-      div.appendChild(b);
-    });
+
+    for(let i=0;i<p.preise.length;i+=2){
+      const row=document.createElement("div");
+      row.className="preis-row";
+      for(let j=0;j<2 && i+j<p.preise.length;j++){
+        const btn=document.createElement("button");
+        btn.className="preis-btn button-orange";
+        btn.textContent=`${p.preise[i+j].toFixed(2)} €`;
+        btn.onclick=()=>{
+          gaeste[currentId].warenkorb.push({name:p.name, preis:p.preise[i+j], menge:1});
+          updateWarenkorb();
+        };
+        row.appendChild(btn);
+      }
+      div.appendChild(row);
+    }
   });
 }
 
 /* ===== WARENKORB ===== */
 function updateWarenkorb(){
+  lastActivity=Date.now();
   const ul=document.getElementById("warenkorb");
   ul.innerHTML="";
   let summe=0;
@@ -210,8 +217,8 @@ function updateWarenkorb(){
     summe+=item.preis*item.menge;
     const li=document.createElement("li");
     li.innerHTML=`${item.name} – ${item.preis.toFixed(2)} € x${item.menge} 
-      <button onclick="plusEins(${index})">+1</button>
-      <button onclick="loeschen(${index})">❌</button>`;
+      <button class="button-green" onclick="plusEins(${index})">+1</button>
+      <button class="button-red" onclick="loeschen(${index})">❌</button>`;
     ul.appendChild(li);
   });
   document.getElementById("summe").textContent=summe.toFixed(2);
@@ -221,15 +228,12 @@ function plusEins(index){ gaeste[currentId].warenkorb[index].menge+=1; updateWar
 function loeschen(index){ gaeste[currentId].warenkorb.splice(index,1); updateWarenkorb(); }
 
 /* ===== AKTIONEN ===== */
-function aufladen(){
-  const v=parseFloat(prompt("Aufladen (€):","10"));
-  if(v){gaeste[currentId].guthaben+=v; document.getElementById("guthaben").textContent=gaeste[currentId].guthaben.toFixed(2);}
-}
-function auszahlen(){
-  if(confirm("Guthaben auszahlen und auf 0 setzen?")){gaeste[currentId].guthaben=0; document.getElementById("guthaben").textContent="0.00";}
-}
+function aufladen(){ lastActivity=Date.now(); const v=parseFloat(prompt("Aufladen (€):","10")); if(v){gaeste[currentId].guthaben+=v; document.getElementById("guthaben").textContent=gaeste[currentId].guthaben.toFixed(2);}}
+function auszahlen(){ lastActivity=Date.now(); if(confirm("Guthaben auszahlen und auf 0 setzen?")){gaeste[currentId].guthaben=0; document.getElementById("guthaben").textContent="0.00";}}
 
+/* ===== BUCHUNG ===== */
 function buchen(){
+  lastActivity=Date.now();
   const gast=gaeste[currentId];
   let summe=gast.warenkorb.reduce((acc,i)=>acc+i.preis*i.menge,0);
   if(summe>gast.guthaben){alert("Nicht genug Guthaben!"); return;}
@@ -241,7 +245,7 @@ function buchen(){
   alert("Gebucht!");
 }
 
-/* ===== RESET & SCAN ===== */
+/* ===== RESET & NEU SCANNEN ===== */
 function resetScanner(){
   document.getElementById("gast").style.display="none";
   currentId="";
@@ -257,6 +261,7 @@ function resetScanner(){
 const notiz=document.getElementById("notiz");
 const counter=document.getElementById("notiz-counter");
 notiz.addEventListener("input",()=>{
+  lastActivity=Date.now();
   const len=notiz.value.length;
   counter.textContent=(500-len)+" Zeichen übrig";
   notiz.style.fontSize=len<=200?"16px":Math.max(8,16-(len-200)/20)+"px";
