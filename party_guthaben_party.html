@@ -16,32 +16,21 @@ h2, h3, h4 {
 }
 
 button {
-  padding: 14px;
-  font-size: 18px;
+  padding: 12px;
+  font-size: 16px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  width: 100%;
-  margin: 4px 0;
 }
 
 .button-green { background-color: #2ecc71; color: #000; }
 .button-red   { background-color: #e74c3c; color: #000; }
 .button-orange{ background-color: #f39c12; color: #000; }
 
-.scrollbox {
-  max-height: 200px;
-  overflow-y: auto;
-  margin-bottom: 10px;
-  border: 1px solid #444;
-  padding: 6px;
-  border-radius: 6px;
-}
-
 #qr-reader { width: 100%; max-width: 320px; margin-top: 15px; }
 #status { margin-top: 10px; font-weight: bold; }
 
-#gast, #produkte, #warenkorb-container { display: none; margin-top: 20px; }
+#gast { display: none; margin-top: 20px; }
 
 textarea {
   width: 100%;
@@ -52,6 +41,23 @@ textarea {
 }
 
 #notiz-counter { font-size: 14px; margin-top: 4px; }
+
+.kachel-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.kachel {
+  flex: 1 1 calc(20% - 6px); /* max 5 pro Reihe */
+  min-width: 50px;
+  text-align: center;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
 
 #warenkorb li button {
   padding: 2px 6px;
@@ -65,17 +71,10 @@ textarea {
 
 <h2>🔥 NEUE VERSION LÄUFT 🔥</h2>
 
-<!-- PIN -->
-<div id="pin-screen">
-  <h2>PIN eingeben</h2>
-  <input type="password" id="pin-input" placeholder="6-stellige PIN">
-  <button class="button-green" onclick="checkPin()">Bestätigen</button>
-  <p id="pin-error" style="color:red;"></p>
-</div>
+<button class="button-green" onclick="startScan()">📷 QR-Code scannen</button>
+<div id="qr-reader"></div>
 
 <div id="status"></div>
-
-<div id="qr-reader"></div>
 
 <div id="gast">
   <h3 id="name">Gast</h3>
@@ -86,10 +85,8 @@ textarea {
 
   <div id="produkte"></div>
 
-  <div id="warenkorb-container">
-    <h4>Ausgewählte Produkte</h4>
-    <ul id="warenkorb"></ul>
-  </div>
+  <h4>Ausgewählte Produkte</h4>
+  <ul id="warenkorb"></ul>
 
   <p><b>Zwischensumme:</b> <span id="summe">0.00</span> €</p>
   <button class="button-orange" onclick="buchen()">Buchen ✅</button>
@@ -102,16 +99,10 @@ textarea {
 <script>
 /* ===== PIN ===== */
 const APP_PIN = "739284";
-
-function checkPin() {
-  const entered = document.getElementById("pin-input").value;
-  if (entered === APP_PIN) {
-    document.getElementById("pin-screen").style.display = "none";
-    document.getElementById("qr-reader").style.display = "block";
-    startScan();
-  } else {
-    document.getElementById("pin-error").textContent = "Falscher PIN!";
-  }
+const pin = prompt("6-stellige PIN eingeben:");
+if (pin !== APP_PIN) {
+  document.body.innerHTML = "<h2>Zugriff verweigert</h2>";
+  throw new Error("Falscher PIN");
 }
 
 /* ===== STATE ===== */
@@ -145,6 +136,7 @@ function startScan(){
     { fps: 10, qrbox: 250 },
     text => {
       scanner.stop().then(() => scanner.clear());
+      scanner = null;
       currentId = text.trim();
       if (!gaeste[currentId]) {
         gaeste[currentId] = {guthaben: 20, warenkorb: [], notiz: ""};
@@ -156,13 +148,12 @@ function startScan(){
 
 function showGast(){
   const gast = gaeste[currentId];
-  document.getElementById("gast").style.display = "block";
-  document.getElementById("warenkorb-container").style.display = "block";
   document.getElementById("name").textContent = currentId;
   document.getElementById("guthaben").textContent = gast.guthaben.toFixed(2);
+  document.getElementById("gast").style.display = "block";
   document.getElementById("notiz").value = gast.notiz;
-  updateWarenkorb();
   renderProdukte();
+  updateWarenkorb();
 }
 
 /* ===== PRODUKTBUTTONS ===== */
@@ -171,11 +162,11 @@ function renderProdukte(){
   div.innerHTML = "";
   produkte.forEach(p => {
     const box = document.createElement("div");
-    box.className = "scrollbox";
+    box.className = "kachel-container";
     box.innerHTML = `<b>${p.name}</b>`;
     p.preise.forEach(preis => {
-      const b = document.createElement("button");
-      b.className = "button-orange";
+      const b = document.createElement("div");
+      b.className = "kachel button-orange";
       b.textContent = `${preis.toFixed(2)} €`;
       b.onclick = () => {
         gaeste[currentId].warenkorb.push({name: p.name, preis, menge:1});
@@ -185,7 +176,6 @@ function renderProdukte(){
     });
     div.appendChild(box);
   });
-  div.style.display = "block";
 }
 
 /* ===== WARENKORB ===== */
@@ -193,18 +183,20 @@ function updateWarenkorb(){
   const ul = document.getElementById("warenkorb");
   ul.innerHTML = "";
   let summe = 0;
-  const gast = gaeste[currentId];
-  gast.warenkorb.forEach((item, index) => {
+  gaeste[currentId].warenkorb.forEach((item,index)=>{
     summe += item.preis * item.menge;
     const li = document.createElement("li");
     li.innerHTML = `${item.name} – ${item.preis.toFixed(2)} € x${item.menge} 
-      <button onclick="loeschen(${index})">❌</button>
-      <button onclick="aendernMenge(${index}, item.menge+1)">+1</button>
-      <button onclick="aendernMenge(${index}, 2)">x2</button>
-      <button onclick="aendernMenge(${index}, 3)">x3</button>`;
+      <button onclick="plusEins(${index})">+1</button>
+      <button onclick="loeschen(${index})">❌</button>`;
     ul.appendChild(li);
   });
   document.getElementById("summe").textContent = summe.toFixed(2);
+}
+
+function plusEins(index){
+  gaeste[currentId].warenkorb[index].menge += 1;
+  updateWarenkorb();
 }
 
 function loeschen(index){
@@ -212,22 +204,17 @@ function loeschen(index){
   updateWarenkorb();
 }
 
-function aendernMenge(index, menge){
-  gaeste[currentId].warenkorb[index].menge = menge;
-  updateWarenkorb();
-}
-
 /* ===== AKTIONEN ===== */
 function aufladen(){
-  const v = parseFloat(prompt("Aufladen (€):", "10"));
-  if (v) {
+  const v = parseFloat(prompt("Aufladen (€):","10"));
+  if(v){
     gaeste[currentId].guthaben += v;
     document.getElementById("guthaben").textContent = gaeste[currentId].guthaben.toFixed(2);
   }
 }
 
 function auszahlen(){
-  if (confirm("Guthaben auszahlen und auf 0 setzen?")) {
+  if(confirm("Guthaben auszahlen und auf 0 setzen?")){
     gaeste[currentId].guthaben = 0;
     document.getElementById("guthaben").textContent = "0.00";
   }
@@ -236,7 +223,7 @@ function auszahlen(){
 function buchen(){
   const gast = gaeste[currentId];
   let summe = gast.warenkorb.reduce((acc,i)=>acc+i.preis*i.menge,0);
-  if (summe > gast.guthaben) {
+  if(summe>gast.guthaben){
     alert("Nicht genug Guthaben!");
     return;
   }
@@ -250,13 +237,18 @@ function buchen(){
 
 /* ===== RESET & NEU SCANNEN ===== */
 function resetScanner(){
-  document.getElementById("gast").style.display = "none";
-  currentId = "";
-  document.getElementById("summe").textContent = "0.00";
-  document.getElementById("notiz").value = "";
-  document.getElementById("notiz-counter").textContent = "500 Zeichen übrig";
+  document.getElementById("gast").style.display="none";
+  currentId="";
+  document.getElementById("summe").textContent="0.00";
+  document.getElementById("notiz").value="";
+  document.getElementById("notiz-counter").textContent="500 Zeichen übrig";
   updateWarenkorb();
-  startScan();
+
+  if(scanner){
+    scanner.stop().then(()=>{scanner.clear(); scanner=null; startScan();});
+  } else {
+    startScan();
+  }
 }
 
 /* ===== NOTIZ ===== */
@@ -264,14 +256,8 @@ const notiz = document.getElementById("notiz");
 const counter = document.getElementById("notiz-counter");
 notiz.addEventListener("input",()=>{
   const len = notiz.value.length;
-  counter.textContent = (500-len) + " Zeichen übrig";
-  if (len <= 200){
-    notiz.style.fontSize="16px";
-  } else {
-    let size = 16-(len-200)/20;
-    if (size<8) size=8;
-    notiz.style.fontSize=size+"px";
-  }
+  counter.textContent=(500-len)+" Zeichen übrig";
+  notiz.style.fontSize= len<=200 ? "16px" : Math.max(8,16-(len-200)/20) +"px";
   if(currentId) gaeste[currentId].notiz = notiz.value;
 });
 </script>
