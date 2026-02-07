@@ -101,7 +101,7 @@ function renderProdukte(){
   testProdukte.forEach(p=>{
     p.preise.forEach(preis=>{
       const b = document.createElement('button');
-      b.textContent=${p.name} – ${preis.toFixed(2)} €;
+      b.textContent = `${p.name} – ${preis.toFixed(2)} €`;
       b.className="button-orange";
       b.onclick = ()=>{
         summe += preis;
@@ -172,3 +172,4 @@ renderProdukte();
 </body>
 
 </html>
+
