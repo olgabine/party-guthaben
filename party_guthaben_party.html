@@ -41,7 +41,7 @@ button {
 #qr-reader { width: 100%; max-width: 320px; margin-top: 15px; }
 #status { margin-top: 10px; font-weight: bold; }
 
-#gast { display: none; margin-top: 20px; }
+#gast, #produkte, #warenkorb-container { display: none; margin-top: 20px; }
 
 textarea {
   width: 100%;
@@ -65,10 +65,17 @@ textarea {
 
 <h2>🔥 NEUE VERSION LÄUFT 🔥</h2>
 
-<button class="button-green" onclick="startScan()">📷 QR-Code scannen</button>
-<div id="qr-reader"></div>
+<!-- PIN -->
+<div id="pin-screen">
+  <h2>PIN eingeben</h2>
+  <input type="password" id="pin-input" placeholder="6-stellige PIN">
+  <button class="button-green" onclick="checkPin()">Bestätigen</button>
+  <p id="pin-error" style="color:red;"></p>
+</div>
 
 <div id="status"></div>
+
+<div id="qr-reader"></div>
 
 <div id="gast">
   <h3 id="name">Gast</h3>
@@ -79,8 +86,10 @@ textarea {
 
   <div id="produkte"></div>
 
-  <h4>Ausgewählte Produkte</h4>
-  <ul id="warenkorb"></ul>
+  <div id="warenkorb-container">
+    <h4>Ausgewählte Produkte</h4>
+    <ul id="warenkorb"></ul>
+  </div>
 
   <p><b>Zwischensumme:</b> <span id="summe">0.00</span> €</p>
   <button class="button-orange" onclick="buchen()">Buchen ✅</button>
@@ -93,10 +102,16 @@ textarea {
 <script>
 /* ===== PIN ===== */
 const APP_PIN = "739284";
-const pin = prompt("6-stellige PIN eingeben:");
-if (pin !== APP_PIN) {
-  document.body.innerHTML = "<h2>Zugriff verweigert</h2>";
-  throw new Error("Falscher PIN");
+
+function checkPin() {
+  const entered = document.getElementById("pin-input").value;
+  if (entered === APP_PIN) {
+    document.getElementById("pin-screen").style.display = "none";
+    document.getElementById("qr-reader").style.display = "block";
+    startScan();
+  } else {
+    document.getElementById("pin-error").textContent = "Falscher PIN!";
+  }
 }
 
 /* ===== STATE ===== */
@@ -141,9 +156,10 @@ function startScan(){
 
 function showGast(){
   const gast = gaeste[currentId];
+  document.getElementById("gast").style.display = "block";
+  document.getElementById("warenkorb-container").style.display = "block";
   document.getElementById("name").textContent = currentId;
   document.getElementById("guthaben").textContent = gast.guthaben.toFixed(2);
-  document.getElementById("gast").style.display = "block";
   document.getElementById("notiz").value = gast.notiz;
   updateWarenkorb();
   renderProdukte();
@@ -169,6 +185,7 @@ function renderProdukte(){
     });
     div.appendChild(box);
   });
+  div.style.display = "block";
 }
 
 /* ===== WARENKORB ===== */
@@ -176,7 +193,8 @@ function updateWarenkorb(){
   const ul = document.getElementById("warenkorb");
   ul.innerHTML = "";
   let summe = 0;
-  gaeste[currentId].warenkorb.forEach((item, index) => {
+  const gast = gaeste[currentId];
+  gast.warenkorb.forEach((item, index) => {
     summe += item.preis * item.menge;
     const li = document.createElement("li");
     li.innerHTML = `${item.name} – ${item.preis.toFixed(2)} € x${item.menge} 
