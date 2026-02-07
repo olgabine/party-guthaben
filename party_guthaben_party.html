@@ -2,24 +2,36 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Party Guthaben Party</title>
+<title>Party Guthaben Manager</title>
 <style>
 body {
   font-family: Arial, sans-serif;
-  margin: 20px;
+  margin: 15px;
   background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
   color: #fff;
 }
 
-h2, h3, h4 {
-  text-shadow: 1px 1px 2px #000;
+h1, h2 {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+#status {
+  text-align: center;
+  margin-bottom: 15px;
+  font-weight: bold;
 }
 
 button {
+  display: block;
+  width: 80%; /* schmaler als 100%, zentralisiert */
+  max-width: 300px;
+  margin: 6px auto;
   padding: 12px;
   font-size: 16px;
+  border-radius: 8px;
   border: none;
-  border-radius: 6px;
   cursor: pointer;
 }
 
@@ -27,57 +39,55 @@ button {
 .button-red   { background-color: #e74c3c; color: #000; }
 .button-orange{ background-color: #f39c12; color: #000; }
 
-#qr-reader { width: 100%; max-width: 320px; margin-top: 15px; }
-#status { margin-top: 10px; font-weight: bold; }
+#qr-reader { width: 100%; max-width: 300px; margin: 10px auto; }
 
-#gast { display: none; margin-top: 20px; }
+#gast {
+  display: none;
+  margin-top: 20px;
+  text-align: center;
+}
 
 textarea {
-  width: 100%;
-  height: 70px;
+  width: 80%;
+  max-width: 300px;
+  height: 60px;
+  margin-top: 10px;
   font-size: 16px;
   resize: none;
-  margin-top: 10px;
 }
 
-#notiz-counter { font-size: 14px; margin-top: 4px; }
+#notiz-counter { font-size: 14px; margin-top: 4px; text-align: center; }
 
-.kachel-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+#warenkorb {
+  list-style: none;
+  padding: 0;
+  margin: 10px auto;
+  width: 80%;
+  max-width: 300px;
+  text-align: left;
 }
 
-.kachel {
-  flex: 1 1 calc(20% - 6px); /* max 5 pro Reihe */
-  min-width: 50px;
-  text-align: center;
-  padding: 10px;
-  font-size: 16px;
-  border-radius: 6px;
-  cursor: pointer;
+#warenkorb li {
+  margin-bottom: 6px;
 }
 
 #warenkorb li button {
   padding: 2px 6px;
   font-size: 14px;
-  margin-left: 4px;
+  margin-left: 6px;
 }
 </style>
 </head>
-
 <body>
 
-<h2>🔥 NEUE VERSION LÄUFT 🔥</h2>
+<h1>🍹 Party Guthaben Manager 🍺</h1>
+<div id="status"></div>
 
 <button class="button-green" onclick="startScan()">📷 QR-Code scannen</button>
 <div id="qr-reader"></div>
 
-<div id="status"></div>
-
 <div id="gast">
-  <h3 id="name">Gast</h3>
+  <h2 id="name">Gast</h2>
   <p><b>Guthaben:</b> <span id="guthaben">0.00</span> €</p>
 
   <button class="button-green" onclick="aufladen()">➡️ Aufladen</button>
@@ -85,13 +95,13 @@ textarea {
 
   <div id="produkte"></div>
 
-  <h4>Ausgewählte Produkte</h4>
+  <h2>Ausgewählte Produkte</h2>
   <ul id="warenkorb"></ul>
 
   <p><b>Zwischensumme:</b> <span id="summe">0.00</span> €</p>
   <button class="button-orange" onclick="buchen()">Buchen ✅</button>
 
-  <textarea id="notiz" placeholder="Notizen (max. 500 Zeichen)" maxlength="500"></textarea>
+  <textarea id="notiz" placeholder="Notizen (mit Emojis)" maxlength="500"></textarea>
   <div id="notiz-counter">500 Zeichen übrig</div>
 </div>
 
@@ -107,10 +117,9 @@ if (pin !== APP_PIN) {
 
 /* ===== STATE ===== */
 let currentId = "";
-let gaeste = {}; // id → {guthaben, warenkorb, notiz}
+let gaeste = {};
 let scanner = null;
 
-/* ===== PRODUKTE ===== */
 const produkte = [
   {name:"Bier", preise:[1,1.5,2,2.5,3,3.5]},
   {name:"Wasser", preise:[1,2,3]},
@@ -129,18 +138,16 @@ window.addEventListener("offline", updateStatus);
 
 /* ===== QR SCAN ===== */
 function startScan(){
-  if (scanner) return;
+  if(scanner) return;
   scanner = new Html5Qrcode("qr-reader");
   scanner.start(
     { facingMode: "environment" },
     { fps: 10, qrbox: 250 },
     text => {
-      scanner.stop().then(() => scanner.clear());
+      scanner.stop().then(()=>scanner.clear());
       scanner = null;
       currentId = text.trim();
-      if (!gaeste[currentId]) {
-        gaeste[currentId] = {guthaben: 20, warenkorb: [], notiz: ""};
-      }
+      if(!gaeste[currentId]) gaeste[currentId]={guthaben:20, warenkorb:[], notiz:""};
       showGast();
     }
   );
@@ -156,46 +163,45 @@ function showGast(){
   updateWarenkorb();
 }
 
-/* ===== PRODUKTBUTTONS ===== */
+/* ===== PRODUKTE ===== */
 function renderProdukte(){
   const div = document.getElementById("produkte");
-  div.innerHTML = "";
-  produkte.forEach(p => {
-    const box = document.createElement("div");
-    box.className = "kachel-container";
-    box.innerHTML = `<b>${p.name}</b>`;
-    p.preise.forEach(preis => {
-      const b = document.createElement("div");
-      b.className = "kachel button-orange";
-      b.textContent = `${preis.toFixed(2)} €`;
-      b.onclick = () => {
-        gaeste[currentId].warenkorb.push({name: p.name, preis, menge:1});
+  div.innerHTML="";
+  produkte.forEach(p=>{
+    const title = document.createElement("h2");
+    title.textContent=p.name;
+    div.appendChild(title);
+    p.preise.forEach(preis=>{
+      const b = document.createElement("button");
+      b.className="button-orange";
+      b.textContent=`${preis.toFixed(2)} €`;
+      b.onclick=()=>{
+        gaeste[currentId].warenkorb.push({name:p.name, preis, menge:1});
         updateWarenkorb();
       };
-      box.appendChild(b);
+      div.appendChild(b);
     });
-    div.appendChild(box);
   });
 }
 
 /* ===== WARENKORB ===== */
 function updateWarenkorb(){
-  const ul = document.getElementById("warenkorb");
-  ul.innerHTML = "";
-  let summe = 0;
+  const ul=document.getElementById("warenkorb");
+  ul.innerHTML="";
+  let summe=0;
   gaeste[currentId].warenkorb.forEach((item,index)=>{
-    summe += item.preis * item.menge;
-    const li = document.createElement("li");
-    li.innerHTML = `${item.name} – ${item.preis.toFixed(2)} € x${item.menge} 
+    summe += item.preis*item.menge;
+    const li=document.createElement("li");
+    li.innerHTML=`${item.name} – ${item.preis.toFixed(2)} € x${item.menge} 
       <button onclick="plusEins(${index})">+1</button>
       <button onclick="loeschen(${index})">❌</button>`;
     ul.appendChild(li);
   });
-  document.getElementById("summe").textContent = summe.toFixed(2);
+  document.getElementById("summe").textContent=summe.toFixed(2);
 }
 
 function plusEins(index){
-  gaeste[currentId].warenkorb[index].menge += 1;
+  gaeste[currentId].warenkorb[index].menge +=1;
   updateWarenkorb();
 }
 
@@ -206,31 +212,22 @@ function loeschen(index){
 
 /* ===== AKTIONEN ===== */
 function aufladen(){
-  const v = parseFloat(prompt("Aufladen (€):","10"));
-  if(v){
-    gaeste[currentId].guthaben += v;
-    document.getElementById("guthaben").textContent = gaeste[currentId].guthaben.toFixed(2);
-  }
+  const v=parseFloat(prompt("Aufladen (€):","10"));
+  if(v){gaeste[currentId].guthaben+=v; document.getElementById("guthaben").textContent=gaeste[currentId].guthaben.toFixed(2);}
 }
 
 function auszahlen(){
-  if(confirm("Guthaben auszahlen und auf 0 setzen?")){
-    gaeste[currentId].guthaben = 0;
-    document.getElementById("guthaben").textContent = "0.00";
-  }
+  if(confirm("Guthaben auszahlen und auf 0 setzen?")){gaeste[currentId].guthaben=0; document.getElementById("guthaben").textContent="0.00";}
 }
 
 function buchen(){
   const gast = gaeste[currentId];
   let summe = gast.warenkorb.reduce((acc,i)=>acc+i.preis*i.menge,0);
-  if(summe>gast.guthaben){
-    alert("Nicht genug Guthaben!");
-    return;
-  }
+  if(summe>gast.guthaben){alert("Nicht genug Guthaben!"); return;}
   gast.guthaben -= summe;
-  gast.warenkorb = [];
-  gast.notiz = "";
-  document.getElementById("guthaben").textContent = gast.guthaben.toFixed(2);
+  gast.warenkorb=[];
+  gast.notiz="";
+  document.getElementById("guthaben").textContent=gast.guthaben.toFixed(2);
   resetScanner();
   alert("Gebucht!");
 }
@@ -243,22 +240,18 @@ function resetScanner(){
   document.getElementById("notiz").value="";
   document.getElementById("notiz-counter").textContent="500 Zeichen übrig";
   updateWarenkorb();
-
-  if(scanner){
-    scanner.stop().then(()=>{scanner.clear(); scanner=null; startScan();});
-  } else {
-    startScan();
-  }
+  if(scanner){scanner.stop().then(()=>{scanner.clear(); scanner=null; startScan();});}
+  else startScan();
 }
 
 /* ===== NOTIZ ===== */
-const notiz = document.getElementById("notiz");
-const counter = document.getElementById("notiz-counter");
+const notiz=document.getElementById("notiz");
+const counter=document.getElementById("notiz-counter");
 notiz.addEventListener("input",()=>{
-  const len = notiz.value.length;
+  const len=notiz.value.length;
   counter.textContent=(500-len)+" Zeichen übrig";
-  notiz.style.fontSize= len<=200 ? "16px" : Math.max(8,16-(len-200)/20) +"px";
-  if(currentId) gaeste[currentId].notiz = notiz.value;
+  notiz.style.fontSize=len<=200?"16px":Math.max(8,16-(len-200)/20)+"px";
+  if(currentId) gaeste[currentId].notiz=notiz.value;
 });
 </script>
 </body>
