@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Party Guthaben Party</title>
-
 <style>
 body {
   font-family: Arial, sans-serif;
@@ -12,24 +11,34 @@ body {
   color: #fff;
 }
 
-h2, h3 {
+h2, h3, h4 {
   text-shadow: 1px 1px 2px #000;
 }
 
 button {
-  padding: 16px 24px;
-  margin: 6px;
+  padding: 14px;
   font-size: 18px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  width: 100%;
+  margin: 4px 0;
 }
 
 .button-green { background-color: #2ecc71; color: #000; }
 .button-red   { background-color: #e74c3c; color: #000; }
 .button-orange{ background-color: #f39c12; color: #000; }
 
-#qr-reader { width: 320px; margin-top: 15px; }
+.scrollbox {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  border: 1px solid #444;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+#qr-reader { width: 100%; max-width: 320px; margin-top: 15px; }
 #status { margin-top: 10px; font-weight: bold; }
 
 #gast { display: none; margin-top: 20px; }
@@ -42,9 +51,12 @@ textarea {
   margin-top: 10px;
 }
 
-#notiz-counter {
+#notiz-counter { font-size: 14px; margin-top: 4px; }
+
+#warenkorb li button {
+  padding: 2px 6px;
   font-size: 14px;
-  margin-top: 4px;
+  margin-left: 4px;
 }
 </style>
 </head>
@@ -67,6 +79,9 @@ textarea {
 
   <div id="produkte"></div>
 
+  <h4>Ausgewählte Produkte</h4>
+  <ul id="warenkorb"></ul>
+
   <p><b>Zwischensumme:</b> <span id="summe">0.00</span> €</p>
   <button class="button-orange" onclick="buchen()">Buchen ✅</button>
 
@@ -86,8 +101,7 @@ if (pin !== APP_PIN) {
 
 /* ===== STATE ===== */
 let currentId = "";
-let guthaben = 20;
-let summe = 0;
+let gaeste = {}; // id → {guthaben, warenkorb, notiz}
 let scanner = null;
 
 /* ===== PRODUKTE ===== */
@@ -110,7 +124,6 @@ window.addEventListener("offline", updateStatus);
 /* ===== QR SCAN ===== */
 function startScan(){
   if (scanner) return;
-
   scanner = new Html5Qrcode("qr-reader");
   scanner.start(
     { facingMode: "environment" },
@@ -118,80 +131,131 @@ function startScan(){
     text => {
       scanner.stop().then(() => scanner.clear());
       currentId = text.trim();
-      document.getElementById("name").textContent = currentId;
-      document.getElementById("gast").style.display = "block";
-      document.getElementById("guthaben").textContent = guthaben.toFixed(2);
-      renderProdukte();
+      if (!gaeste[currentId]) {
+        gaeste[currentId] = {guthaben: 20, warenkorb: [], notiz: ""};
+      }
+      showGast();
     }
   );
+}
+
+function showGast(){
+  const gast = gaeste[currentId];
+  document.getElementById("name").textContent = currentId;
+  document.getElementById("guthaben").textContent = gast.guthaben.toFixed(2);
+  document.getElementById("gast").style.display = "block";
+  document.getElementById("notiz").value = gast.notiz;
+  updateWarenkorb();
+  renderProdukte();
 }
 
 /* ===== PRODUKTBUTTONS ===== */
 function renderProdukte(){
   const div = document.getElementById("produkte");
-  div.innerHTML = "<h4>Produkte</h4>";
-
+  div.innerHTML = "";
   produkte.forEach(p => {
+    const box = document.createElement("div");
+    box.className = "scrollbox";
+    box.innerHTML = `<b>${p.name}</b>`;
     p.preise.forEach(preis => {
       const b = document.createElement("button");
       b.className = "button-orange";
-      b.textContent = `${p.name} – ${preis.toFixed(2)} €`;
+      b.textContent = `${preis.toFixed(2)} €`;
       b.onclick = () => {
-        summe += preis;
-        document.getElementById("summe").textContent = summe.toFixed(2);
+        gaeste[currentId].warenkorb.push({name: p.name, preis, menge:1});
+        updateWarenkorb();
       };
-      div.appendChild(b);
+      box.appendChild(b);
     });
+    div.appendChild(box);
   });
+}
+
+/* ===== WARENKORB ===== */
+function updateWarenkorb(){
+  const ul = document.getElementById("warenkorb");
+  ul.innerHTML = "";
+  let summe = 0;
+  gaeste[currentId].warenkorb.forEach((item, index) => {
+    summe += item.preis * item.menge;
+    const li = document.createElement("li");
+    li.innerHTML = `${item.name} – ${item.preis.toFixed(2)} € x${item.menge} 
+      <button onclick="loeschen(${index})">❌</button>
+      <button onclick="aendernMenge(${index}, item.menge+1)">+1</button>
+      <button onclick="aendernMenge(${index}, 2)">x2</button>
+      <button onclick="aendernMenge(${index}, 3)">x3</button>`;
+    ul.appendChild(li);
+  });
+  document.getElementById("summe").textContent = summe.toFixed(2);
+}
+
+function loeschen(index){
+  gaeste[currentId].warenkorb.splice(index,1);
+  updateWarenkorb();
+}
+
+function aendernMenge(index, menge){
+  gaeste[currentId].warenkorb[index].menge = menge;
+  updateWarenkorb();
 }
 
 /* ===== AKTIONEN ===== */
 function aufladen(){
   const v = parseFloat(prompt("Aufladen (€):", "10"));
   if (v) {
-    guthaben += v;
-    document.getElementById("guthaben").textContent = guthaben.toFixed(2);
+    gaeste[currentId].guthaben += v;
+    document.getElementById("guthaben").textContent = gaeste[currentId].guthaben.toFixed(2);
   }
 }
 
 function auszahlen(){
   if (confirm("Guthaben auszahlen und auf 0 setzen?")) {
-    guthaben = 0;
+    gaeste[currentId].guthaben = 0;
     document.getElementById("guthaben").textContent = "0.00";
   }
 }
 
 function buchen(){
-  if (summe > guthaben) {
+  const gast = gaeste[currentId];
+  let summe = gast.warenkorb.reduce((acc,i)=>acc+i.preis*i.menge,0);
+  if (summe > gast.guthaben) {
     alert("Nicht genug Guthaben!");
     return;
   }
-  guthaben -= summe;
-  summe = 0;
-  document.getElementById("guthaben").textContent = guthaben.toFixed(2);
+  gast.guthaben -= summe;
+  gast.warenkorb = [];
+  gast.notiz = "";
+  document.getElementById("guthaben").textContent = gast.guthaben.toFixed(2);
+  resetScanner();
+  alert("Gebucht!");
+}
+
+/* ===== RESET & NEU SCANNEN ===== */
+function resetScanner(){
+  document.getElementById("gast").style.display = "none";
+  currentId = "";
   document.getElementById("summe").textContent = "0.00";
   document.getElementById("notiz").value = "";
   document.getElementById("notiz-counter").textContent = "500 Zeichen übrig";
-  alert("Gebucht!");
+  updateWarenkorb();
+  startScan();
 }
 
 /* ===== NOTIZ ===== */
 const notiz = document.getElementById("notiz");
 const counter = document.getElementById("notiz-counter");
-
-notiz.addEventListener("input", () => {
+notiz.addEventListener("input",()=>{
   const len = notiz.value.length;
-  counter.textContent = (500 - len) + " Zeichen übrig";
-
-  if (len <= 200) {
-    notiz.style.fontSize = "16px";
+  counter.textContent = (500-len) + " Zeichen übrig";
+  if (len <= 200){
+    notiz.style.fontSize="16px";
   } else {
-    let size = 16 - (len - 200) / 20;
-    if (size < 8) size = 8;
-    notiz.style.fontSize = size + "px";
+    let size = 16-(len-200)/20;
+    if (size<8) size=8;
+    notiz.style.fontSize=size+"px";
   }
+  if(currentId) gaeste[currentId].notiz = notiz.value;
 });
 </script>
-
 </body>
 </html>
