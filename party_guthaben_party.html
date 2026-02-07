@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Party Guthaben Party</title>
+<style>
+body { font-family: Arial, sans-serif; margin:20px; background: #a0c4ff url('https://i.ibb.co/YdT7sK3/paisley-mini.png') repeat; color: #000; }
+h2,h3 { text-shadow: 1px 1px 2px #fff; }
+button { padding:16px 24px; margin:6px; font-size:18px; border:none; border-radius:6px; cursor:pointer; }
+#qr-reader { width:320px; margin-top:15px; }
+#gast { margin-top:20px; display:none; }
+#produkte { margin-top:15px; }
+#status { font-weight:bold; margin-top:10px; }
+.button-green { background-color:#4CAF50; color:#fff; } 
+.button-red { background-color:#f44336; color:#fff; }  
+.button-orange { background-color:#FF9800; color:#fff; } 
+textarea { width:100%; height:60px; margin-top:10px; font-size:16px; resize:none; }
+#notiz-counter { font-size:14px; margin-top:4px; }
+</style>
+</head>
+
+<body>
+
+<h2>Party Guthaben</h2>
+
+<button id="scanBtn" class="button-green" onclick="startScan()">📷 QR-Code scannen</button>
+<div id="qr-reader"></div>
+
+<div id="status"></div>
+
+<div id="gast">
+  <h3 id="name">Gast</h3>
+  <p><b>Guthaben:</b> <span id="guthaben">0.00</span> €</p>
+
+  <button class="button-green" onclick="aufladen()">➡️ Aufladen</button>
+  <button class="button-red" onclick="auszahlen()">⬅️ Auszahlen</button>
+
+  <div id="produkte"></div>
+
+  <p><b>Zwischensumme:</b> <span id="summe">0.00</span> €</p>
+  <button class="button-orange" onclick="buchen()">Buchen ✅</button>
+
+  <textarea id="notiz" placeholder="Notizen eingeben..." maxlength="500"></textarea>
+  <div id="notiz-counter">500 Zeichen übrig</div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+const APP_PIN = "739284";
+
+/* PIN-Abfrage */
+const pin = prompt("6-stellige PIN eingeben:");
+if(pin !== APP_PIN){
+  document.body.innerHTML="<h2>Zugriff verweigert</h2>";
+  throw new Error("Falscher PIN");
+}
+
+/* CONFIG */
+let currentId = '';
+let guthaben = 20;
+let offlineQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+let summe = 0;
+let scanner = null;
+
+const testProdukte = [
+  {name:"Bier",preise:[1,1.5,2,2.5,3,3.5]},
+  {name:"Wasser",preise:[1,2,3]},
+  {name:"Cocktail",preise:[4.5,5.5,6.5,7.5]},
+  {name:"Shots",preise:[1,1.5,2,2.5]}
+];
+
+/* STATUS */
+function updateStatus(){ 
+  document.getElementById('status').textContent = navigator.onLine ? '🟢 Online' : '🔴 Offline – Buchungen gespeichert'; 
+}
+window.addEventListener('online', syncOffline);
+window.addEventListener('offline', updateStatus);
+updateStatus();
+
+/* QR SCAN */
+function startScan(){
+  if(scanner) return;
+  scanner = new Html5Qrcode("qr-reader");
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    text=>{
+      alert("QR-Code erkannt: " + text);
+      scanner.stop().then(()=>scanner.clear());
+      currentId = text.trim();
+      document.getElementById('name').textContent = currentId;
+      document.getElementById('gast').style.display='block';
+    }
+  );
+}
+
+/* PRODUKTE BUTTONS */
+function renderProdukte(){
+  const div = document.getElementById('produkte');
+  div.innerHTML="<h4>Produkte</h4>";
+  testProdukte.forEach(p=>{
+    p.preise.forEach(preis=>{
+      const b = document.createElement('button');
+      b.textContent=${p.name} – ${preis.toFixed(2)} €;
+      b.className="button-orange";
+      b.onclick = ()=>{
+        summe += preis;
+        document.getElementById('summe').textContent = summe.toFixed(2);
+      };
+      div.appendChild(b);
+    });
+  });
+}
+
+/* BUTTON-AKTIONEN */
+function aufladen(){
+  let v = parseFloat(prompt("Betrag aufladen (€):","10"));
+  if(v){ 
+    guthaben += v; 
+    document.getElementById('guthaben').textContent=guthaben.toFixed(2); 
+  }
+}
+
+function auszahlen(){
+  if(confirm("Restguthaben auszahlen?")){
+    guthaben = 0;
+    document.getElementById('guthaben').textContent='0.00';
+  }
+}
+
+/* BUCHEN */
+function buchen(){
+  if(summe > guthaben){
+    alert("Nicht genug Guthaben!");
+    return;
+  }
+  guthaben -= summe;
+  document.getElementById('guthaben').textContent=guthaben.toFixed(2);
+  alert("Vorgang gebucht!");
+  summe = 0;
+  document.getElementById('summe').textContent="0.00";
+  document.getElementById('notiz').value = "";
+  document.getElementById('notiz-counter').textContent = "500 Zeichen übrig";
+}
+
+/* OFFLINE SYNC (Dummy) */
+function syncOffline(){ 
+  updateStatus(); 
+  offlineQueue=[]; 
+  localStorage.removeItem('offlineQueue'); 
+}
+
+/* Notiz dynamische Schriftgröße + Counter */
+const notiz = document.getElementById('notiz');
+const counter = document.getElementById('notiz-counter');
+notiz.addEventListener('input', ()=>{
+  const len = notiz.value.length;
+  const remaining = 500 - len;
+  counter.textContent = remaining + " Zeichen übrig";
+
+  if(len <= 200){
+    notiz.style.fontSize = '16px';
+  } else {
+    let size = 16 - (len-200)/20; 
+    if(size < 8) size = 8;
+    notiz.style.fontSize = size + 'px';
+  }
+});
+
+renderProdukte();
+</script>
+</body>
+</html>
