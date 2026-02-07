@@ -2,338 +2,132 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
+<title>Party Guthaben</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🍹 Party Guthaben Manager 🍺</title>
 <style>
-/* ===== Hintergrund ===== */
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 15px;
-  background: linear-gradient(160deg,#0b1f4a,#0f286e,#112f90);
-  color: #fff;
-  overflow-x: hidden;
-}
-
-/* ===== Überschriften ===== */
-h1,h2{ text-align:center; font-weight:bold; margin-bottom:15px; }
-
-/* ===== Status ===== */
-#status{ text-align:center; margin-bottom:15px; font-weight:bold; }
-
-/* ===== Buttons ===== */
-button{
-  display:block;
-  width:90%;
-  max-width:320px;
-  margin:8px auto;
-  padding:16px;
-  font-size:18px;
-  border-radius:12px;
-  border:none;
-  cursor:pointer;
-  color:#fff;
-  font-weight:bold;
-  box-shadow:0 4px 12px rgba(0,0,0,0.4);
-  transition: transform 0.1s, box-shadow 0.2s;
-}
-button:active{ transform: scale(0.97); box-shadow:0 2px 6px rgba(0,0,0,0.4); }
-
-.button-green{ background: linear-gradient(145deg,#2ecc71,#27ae60);}
-.button-red{ background: linear-gradient(145deg,#e74c3c,#c0392b);}
-.button-orange{ background: linear-gradient(145deg,#f39c12,#d35400);}
-
-/* ===== QR Reader ===== */
-#qr-reader{ width:90%; max-width:320px; margin:10px auto; }
-
-/* ===== Gastbereich ===== */
-#gast{ display:none; margin-top:20px; text-align:center; }
-textarea{
-  width:90%;
-  max-width:320px;
-  height:60px;
-  margin-top:10px;
-  font-size:16px;
-  resize:none;
-  border-radius:8px;
-  padding:8px;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
-}
-#notiz-counter{ font-size:14px; margin-top:4px; text-align:center; }
-
-/* ===== Warenkorb ===== */
-#warenkorb{
-  list-style:none;
-  padding:10px;
-  margin:10px auto;
-  width:90%;
-  max-width:320px;
-  text-align:left;
-  background:rgba(255,255,255,0.05);
-  border-radius:10px;
-  box-shadow:0 4px 12px rgba(0,0,0,0.3);
-}
-#warenkorb li{
-  margin-bottom:8px;
-  word-wrap:break-word;
-  padding:6px;
-  border-radius:6px;
-  background:rgba(255,255,255,0.05);
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-#warenkorb li button{
-  padding:6px 10px;
-  font-size:16px;
-  margin-left:6px;
-  border-radius:8px;
-}
-
-/* ===== Produkte ===== */
-#produkte{ margin-top:15px; }
-.produkt-titel{ margin:10px 0 5px 0; font-weight:bold; text-align:center; font-size:18px; }
-.preis-row{ display:flex; justify-content:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
-.preis-btn{ flex:1 1 calc(45%); min-width:100px; padding:16px; font-size:18px; border-radius:12px; border:none; cursor:pointer; color:#fff; font-weight:bold; box-shadow:0 4px 12px rgba(0,0,0,0.4); transition: transform 0.1s, box-shadow 0.2s; }
-.preis-btn:active{ transform:scale(0.97); box-shadow:0 2px 6px rgba(0,0,0,0.4); }
+body { font-family: Arial,sans-serif; margin:10px; background: linear-gradient(135deg,#0b3d91,#0f4ea1); color:#fff; }
+h2,h3{ text-shadow:1px 1px 2px #000; }
+button{ padding:14px 20px; margin:6px 0; font-size:18px; border:none; border-radius:8px; cursor:pointer; width:100%; font-weight:bold; color:#000; }
+.button-green{ background: linear-gradient(to right,#2ecc71,#27ae60); }
+.button-red{ background: linear-gradient(to right,#e74c3c,#c0392b); }
+.button-orange{ background: linear-gradient(to right,#f39c12,#e67e22); }
+#qr-reader{ width:100%; margin-top:15px; }
+#status{ margin-top:10px; font-weight:bold; }
+#gast{ display:none; margin-top:20px; }
+textarea{ width:100%; height:70px; font-size:16px; resize:none; margin-top:10px; }
+#notiz-counter{ font-size:14px; margin-top:4px; }
+#produkte{ margin-top:10px; }
+.warenkorb-item{ display:flex; justify-content:space-between; align-items:center; margin:4px 0; background:rgba(255,255,255,0.1); padding:6px 8px; border-radius:6px; }
+.warenkorb-item button{ width:36px; padding:4px; margin-left:4px; font-size:16px; }
 </style>
 </head>
 <body>
 
-<h1>🍹 Party Guthaben Manager 🍺</h1>
-<div id="status"></div>
+<h2>🔥 Party Guthaben 🔥</h2>
 
 <button class="button-green" onclick="startScan()">📷 QR-Code scannen</button>
 <div id="qr-reader"></div>
+<div id="status"></div>
 
 <div id="gast">
-  <h2 id="name">Gast</h2>
+  <h3 id="name">Gast</h3>
   <p><b>Guthaben:</b> <span id="guthaben">0.00</span> €</p>
 
   <button class="button-green" onclick="aufladen()">➡️ Aufladen</button>
   <button class="button-red" onclick="auszahlen()">⬅️ Auszahlen</button>
 
+  <button class="button-orange" onclick="neuesProdukt()">➕ Neues Produkt hinzufügen</button>
+
   <div id="produkte"></div>
 
-  <h2>Ausgewählte Produkte</h2>
-  <ul id="warenkorb"></ul>
+  <h4>Warenkorb</h4>
+  <div id="warenkorb"></div>
 
   <p><b>Zwischensumme:</b> <span id="summe">0.00</span> €</p>
   <button class="button-orange" onclick="buchen()">Buchen ✅</button>
 
-  <textarea id="notiz" placeholder="Notizen (mit Emojis)" maxlength="500"></textarea>
+  <textarea id="notiz" placeholder="Notizen (max. 500 Zeichen)"></textarea>
   <div id="notiz-counter">500 Zeichen übrig</div>
+
+  <button class="button-green" onclick="scanAgain()">QR-Code erneut scannen 🔄</button>
 </div>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
-/* ===== PIN & Inaktivität ===== */
-const APP_PIN="739284";
-let lastActivity=Date.now();
-function promptPIN(){
-  const pin=prompt("6-stellige PIN eingeben:");
-  if(pin!==APP_PIN){document.body.innerHTML="<h2>Zugriff verweigert</h2>"; throw new Error("Falscher PIN");}
-}
-promptPIN();
-setInterval(()=>{if(Date.now()-lastActivity>5*60*1000) promptPIN();},60000);
+let currentId=""; let gaeste={}; let summe=0; let scanner=null;
 
-/* ===== STATE ===== */
-let currentId="";
-let gaeste={};
-let produkteListe=[];
-let scanner=null;
-
-// <-- Hier ist deine echte Web-App URL -->
-const API_BASE="https://script.google.com/macros/s/AKTUELLE_DEINE_URL/exec";
-
-/* ===== STATUS ===== */
+// STATUS
 function updateStatus(){
-  document.getElementById("status").textContent=
-    navigator.onLine?"🟢 Online":"🔴 Offline – Buchungen werden gemerkt";
+  document.getElementById("status").textContent =
+    navigator.onLine ? "🟢 Online" : "🔴 Offline – Buchungen werden gepuffert";
 }
 updateStatus();
 window.addEventListener("online",updateStatus);
 window.addEventListener("offline",updateStatus);
 
-/* ===== PRODUKTE LADEN ===== */
-async function ladeProdukte(){
-  try{
-    const res=await fetch(API_BASE+"?action=produkte");
-    produkteListe=await res.json();
-  }catch(err){
-    alert("Produkte konnten nicht geladen werden.");
-    produkteListe=[
-      {name:"Bier",preise:[1,1.5,2]},
-      {name:"Wasser",preise:[1,2,3]}
-    ];
-  }
-}
-ladeProdukte();
+// QR-SCAN
+function startScan(){if(scanner) return; scanner=new Html5Qrcode("qr-reader"); scanner.start({facingMode:"environment"},{fps:10,qrbox:250},text=>{scanner.stop().then(()=>scanner.clear()); currentId=text.trim(); checkGast(currentId);});}
+function scanAgain(){summe=0; document.getElementById("summe").textContent="0.00"; document.getElementById("warenkorb").innerHTML=""; document.getElementById("notiz").value=""; document.getElementById("notiz-counter").textContent="500 Zeichen übrig"; startScan();}
 
-/* ===== QR SCAN ===== */
-function startScan(){
-  lastActivity=Date.now();
-  if(scanner) return;
-  scanner=new Html5Qrcode("qr-reader");
-  scanner.start({facingMode:"environment"},{fps:10,qrbox:250},text=>{
-    scanner.stop().then(()=>scanner.clear());
-    scanner=null;
-    currentId=text.trim();
-    ladeGuthaben(currentId);
-  });
-}
-
-/* ===== GUTHABEN LADEN ===== */
-async function ladeGuthaben(id){
-  try{
-    const res=await fetch(API_BASE+"?action=gast&id="+encodeURIComponent(id));
-    const data=await res.json();
-    gaeste[id]={guthaben:data.guthaben, warenkorb:[], notiz:""};
-    showGast();
-  }catch(err){
-    alert("Gast nicht gefunden, lokal anlegen.");
-    if(!gaeste[id]) gaeste[id]={guthaben:20,warenkorb:[],notiz:""};
-    showGast();
-  }
-}
-
-/* ===== GAST ANZEIGE ===== */
-function showGast(){
-  lastActivity=Date.now();
-  const gast=gaeste[currentId];
-  document.getElementById("name").textContent=currentId;
-  document.getElementById("guthaben").textContent=gast.guthaben.toFixed(2);
+// GAST
+function checkGast(id){ google.script.run.withSuccessHandler(initGast).ensureGast(id); }
+function initGast(data){
+  if(!data.name){ let name=prompt("Name des Gastes:"); google.script.run.withSuccessHandler(initGast).ensureGast(currentId,name); return;}
+  gaeste[currentId]={guthaben:data.guthaben,warenkorb:[],notiz:""};
+  document.getElementById("name").textContent=data.name;
+  document.getElementById("guthaben").textContent=data.guthaben.toFixed(2);
   document.getElementById("gast").style.display="block";
-  document.getElementById("notiz").value=gast.notiz;
-  renderProdukte();
-  updateWarenkorb();
+  loadProdukte();
 }
 
-/* ===== PRODUKTE RENDERN ===== */
-function renderProdukte(){
-  const div=document.getElementById("produkte");
-  div.innerHTML="";
-  produkteListe.forEach(p=>{
-    const title=document.createElement("div");
-    title.className="produkt-titel";
-    title.textContent=p.name;
-    div.appendChild(title);
-
-    for(let i=0;i<p.preise.length;i+=2){
-      const row=document.createElement("div");
-      row.className="preis-row";
-      for(let j=0;j<2 && i+j<p.preise.length;j++){
-        const btn=document.createElement("button");
-        btn.className="preis-btn button-orange";
-        btn.textContent=`${p.preise[i+j].toFixed(2)} €`;
-        btn.onclick=()=>{
-          gaeste[currentId].warenkorb.push({name:p.name, preis:p.preise[i+j], menge:1});
-          updateWarenkorb();
-        };
-        row.appendChild(btn);
-      }
-      div.appendChild(row);
-    }
+// PRODUKTE
+function loadProdukte(){ google.script.run.withSuccessHandler(renderProdukte).getProdukte(); }
+function renderProdukte(produkte){
+  const div=document.getElementById("produkte"); div.innerHTML="<h4>Produkte</h4>";
+  produkte.forEach(p=>{
+    const container=document.createElement("div");
+    const name=document.createElement("b"); name.textContent=p.name; container.appendChild(name); container.appendChild(document.createElement("br"));
+    p.preise.forEach(preis=>{
+      const b=document.createElement("button"); b.className="button-orange"; b.textContent=preis.toFixed(2)+" €";
+      b.onclick=()=>{ addWarenkorb(p.name,preis); }; container.appendChild(b);
+    });
+    div.appendChild(container);
   });
 }
 
-/* ===== WARENKORB ===== */
-function updateWarenkorb(){
-  lastActivity=Date.now();
-  const ul=document.getElementById("warenkorb");
-  ul.innerHTML="";
-  let summe=0;
-  gaeste[currentId].warenkorb.forEach((item,index)=>{
-    summe+=item.preis*item.menge;
-    const li=document.createElement("li");
-    li.innerHTML=`${item.name} – ${item.preis.toFixed(2)} € x${item.menge} 
-      <button class="button-green" onclick="plusEins(${index})">+1</button>
-      <button class="button-red" onclick="loeschen(${index})">❌</button>`;
-    ul.appendChild(li);
+// WARENKORB
+function addWarenkorb(name,preis){ summe+=preis; document.getElementById("summe").textContent=summe.toFixed(2); gaeste[currentId].warenkorb.push({name:name,preis:preis,menge:1,notiz:document.getElementById("notiz").value}); renderWarenkorb(); }
+function renderWarenkorb(){
+  const div=document.getElementById("warenkorb"); div.innerHTML="";
+  gaeste[currentId].warenkorb.forEach((item,i)=>{
+    const row=document.createElement("div"); row.className="warenkorb-item";
+    row.innerHTML=`${item.name} – ${item.preis.toFixed(2)} € x ${item.menge}`;
+    const plus=document.createElement("button"); plus.textContent="+"; plus.onclick=()=>{ item.menge++; summe+=item.preis; document.getElementById("summe").textContent=summe.toFixed(2); renderWarenkorb();};
+    const minus=document.createElement("button"); minus.textContent="-"; minus.onclick=()=>{ item.menge--; summe-=item.preis; if(item.menge<=0){ gaeste[currentId].warenkorb.splice(i,1);} document.getElementById("summe").textContent=summe.toFixed(2); renderWarenkorb();};
+    row.appendChild(plus); row.appendChild(minus); div.appendChild(row);
   });
-  document.getElementById("summe").textContent=summe.toFixed(2);
-}
-function plusEins(index){ gaeste[currentId].warenkorb[index].menge+=1; updateWarenkorb(); }
-function loeschen(index){ gaeste[currentId].warenkorb.splice(index,1); updateWarenkorb(); }
-
-/* ===== AKTIONEN ===== */
-async function aufladen(){ 
-  lastActivity=Date.now(); 
-  const v=parseFloat(prompt("Aufladen (€):","10")); 
-  if(v){
-    gaeste[currentId].guthaben+=v; 
-    document.getElementById("guthaben").textContent=gaeste[currentId].guthaben.toFixed(2);
-    renderProdukte(); 
-    await updateGast(); // Update Sheet
-  }
-}
-async function auszahlen(){ 
-  lastActivity=Date.now(); 
-  if(confirm("Guthaben auszahlen und auf 0 setzen?")){
-    gaeste[currentId].guthaben=0; 
-    document.getElementById("guthaben").textContent="0.00";
-    renderProdukte();
-    await updateGast(); // Update Sheet
-  }
 }
 
-/* ===== BUCHUNG ===== */
-async function buchen(){
-  lastActivity=Date.now();
-  const gast=gaeste[currentId];
-  let summe=gast.warenkorb.reduce((acc,i)=>acc+i.preis*i.menge,0);
-  if(summe>gast.guthaben){alert("Nicht genug Guthaben!"); return;}
-  gast.guthaben-=summe;
-  await speicherBuchung(gast.warenkorb, gast.notiz);
-  gast.warenkorb=[];
-  gast.notiz="";
-  document.getElementById("guthaben").textContent=gast.guthaben.toFixed(2);
-  resetScanner();
-  alert("Gebucht!");
-}
+// AUFLADEN / AUSZAHLEN
+function aufladen(){ const v=parseFloat(prompt("Aufladen (€):","5")); if(v){ google.script.run.withSuccessHandler(g=>{ gaeste[currentId].guthaben=g; document.getElementById("guthaben").textContent=g.toFixed(2);}).aufladenGast(currentId,v); } }
+function auszahlen(){ if(confirm("Guthaben auszahlen?")){ gaeste[currentId].warenkorb=[]; summe=0; document.getElementById("summe").textContent="0.00"; document.getElementById("warenkorb").innerHTML=""; document.getElementById("guthaben").textContent="0.00"; }}
 
-/* ===== SPEICHERN IN SHEETS ===== */
-async function updateGast(){
-  try{
-    await fetch(API_BASE,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"updateGast",id:currentId,guthaben:gaeste[currentId].guthaben})
-    });
-  }catch(err){console.error(err);}
-}
-async function speicherBuchung(warenkorb,notiz){
-  try{
-    await fetch(API_BASE,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"buchen",id:currentId,warenkorb,notiz})
-    });
-    await updateGast();
-  }catch(err){console.error(err);}
-}
+// BUCHEN
+function buchen(){ if(summe>gaeste[currentId].guthaben){ alert("Nicht genug Guthaben!"); return; } google.script.run.saveBooking(currentId,gaeste[currentId].warenkorb); gaeste[currentId].guthaben-=summe; summe=0; gaeste[currentId].warenkorb=[]; document.getElementById("summe").textContent="0.00"; document.getElementById("warenkorb").innerHTML=""; document.getElementById("guthaben").textContent=gaeste[currentId].guthaben.toFixed(2); document.getElementById("notiz").value=""; document.getElementById("notiz-counter").textContent="500 Zeichen übrig"; alert("Gebucht!"); scanAgain();}
 
-/* ===== RESET & NEU SCANNEN ===== */
-function resetScanner(){
-  document.getElementById("gast").style.display="none";
-  currentId="";
-  document.getElementById("summe").textContent="0.00";
-  document.getElementById("notiz").value="";
-  document.getElementById("notiz-counter").textContent="500 Zeichen übrig";
-  updateWarenkorb();
-  startScan();
-}
+// NOTIZ
+const notiz=document.getElementById("notiz"); const counter=document.getElementById("notiz-counter");
+notiz.addEventListener("input",()=>{ const len=notiz.value.length; counter.textContent=(500-len)+" Zeichen übrig"; notiz.style.fontSize=len<=200 ? "16px" : Math.max(8,16-(len-200)/20)+"px"; });
 
-/* ===== NOTIZ ===== */
-const notiz=document.getElementById("notiz");
-const counter=document.getElementById("notiz-counter");
-notiz.addEventListener("input",()=>{
-  lastActivity=Date.now();
-  const len=notiz.value.length;
-  counter.textContent=(500-len)+" Zeichen übrig";
-  notiz.style.fontSize=len<=200?"16px":Math.max(8,16-(len-200)/20)+"px";
-  if(currentId) gaeste[currentId].notiz=notiz.value;
-});
+// NEUES PRODUKT HINZUFÜGEN
+function neuesProdukt(){
+  const name=prompt("Name des Produkts:"); if(!name) return;
+  const preiseStr=prompt("Preise durch Komma getrennt, z.B. 1,1.5,2:"); if(!preiseStr) return;
+  const preise=preiseStr.split(",").map(p=>parseFloat(p.trim())).filter(p=>!isNaN(p));
+  if(preise.length==0){ alert("Keine gültigen Preise!"); return;}
+  google.script.run.withSuccessHandler(()=>loadProdukte()).addProdukt(name,preise);
+  alert("Produkt hinzugefügt: "+name);
+}
 </script>
 </body>
 </html>
