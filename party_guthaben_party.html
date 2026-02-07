@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>🍹 Party Guthaben Manager 🍺</title>
 <style>
-/* ===== Hintergrund ===== */
 body {
   font-family: Arial, sans-serif;
   margin: 0;
@@ -14,22 +13,8 @@ body {
   color: #fff;
   overflow-x: hidden;
 }
-
-/* ===== Überschriften ===== */
-h1, h2 {
-  text-align: center;
-  font-weight: bold;
-  margin-bottom: 15px;
-}
-
-/* ===== Status ===== */
-#status {
-  text-align: center;
-  margin-bottom: 15px;
-  font-weight: bold;
-}
-
-/* ===== Buttons ===== */
+h1, h2 { text-align: center; font-weight: bold; margin-bottom: 15px; }
+#status { text-align: center; margin-bottom: 15px; font-weight: bold; }
 button {
   display: block;
   width: 90%;
@@ -46,18 +31,11 @@ button {
   transition: transform 0.1s, box-shadow 0.2s;
 }
 button:active { transform: scale(0.97); box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
-
-/* Farbverläufe für Buttons */
 .button-green { background: linear-gradient(145deg,#2ecc71,#27ae60);}
 .button-red   { background: linear-gradient(145deg,#e74c3c,#c0392b);}
 .button-orange{ background: linear-gradient(145deg,#f39c12,#d35400);}
-
-/* ===== QR Reader ===== */
 #qr-reader { width: 90%; max-width: 320px; margin: 10px auto; }
-
-/* ===== Gastbereich ===== */
 #gast { display: none; margin-top: 20px; text-align: center; }
-
 textarea {
   width: 90%;
   max-width: 320px;
@@ -69,10 +47,7 @@ textarea {
   padding: 8px;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
 }
-
 #notiz-counter { font-size: 14px; margin-top: 4px; text-align: center; }
-
-/* ===== Warenkorb ===== */
 #warenkorb {
   list-style: none;
   padding: 10px;
@@ -100,8 +75,6 @@ textarea {
   margin-left: 6px;
   border-radius: 8px;
 }
-
-/* ===== Produkte ===== */
 #produkte { margin-top: 15px; }
 .produkt-titel { margin: 10px 0 5px 0; font-weight: bold; text-align: center; font-size: 18px; }
 .preis-row { display: flex; justify-content: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
@@ -138,39 +111,30 @@ textarea {
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
-/* ===== PIN & Inaktivität ===== */
 const APP_PIN="739284";
 let lastActivity=Date.now();
+let currentId="";
+let gaeste={};
+let scanner=null;
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxN2KX9w5hll0G7qXT-EzV4I1oB7Ic-49pqimcgYXysZU4IlECYNi5WQUzS0DGXhfVf3g/exec";
+
+// ===== PIN & Inaktivität =====
 function promptPIN(){
   const pin=prompt("6-stellige PIN eingeben:");
   if(pin!==APP_PIN){document.body.innerHTML="<h2>Zugriff verweigert</h2>"; throw new Error("Falscher PIN");}
 }
 promptPIN();
-/* 5 Minuten Inaktivität */
 setInterval(()=>{if(Date.now()-lastActivity>5*60*1000) promptPIN();},60000);
 
-/* ===== STATE ===== */
-let currentId="";
-let gaeste={};
-let scanner=null;
-
-const produkte=[
-  {name:"Bier", preise:[1,1.5,2,2.5,3,3.5]},
-  {name:"Wasser", preise:[1,2,3]},
-  {name:"Cocktail", preise:[4.5,5.5,6.5,7.5]},
-  {name:"Shots", preise:[1,1.5,2,2.5]}
-];
-
-/* ===== STATUS ===== */
+// ===== Status =====
 function updateStatus(){
-  document.getElementById("status").textContent=
-    navigator.onLine?"🟢 Online":"🔴 Offline – Buchungen werden gemerkt";
+  document.getElementById("status").textContent = navigator.onLine ? "🟢 Online" : "🔴 Offline – Buchungen werden gemerkt";
 }
 updateStatus();
-window.addEventListener("online",updateStatus);
-window.addEventListener("offline",updateStatus);
+window.addEventListener("online", updateStatus);
+window.addEventListener("offline", updateStatus);
 
-/* ===== QR SCAN ===== */
+// ===== QR Scan =====
 function startScan(){
   lastActivity=Date.now();
   if(scanner) return;
@@ -179,44 +143,46 @@ function startScan(){
     scanner.stop().then(()=>scanner.clear());
     scanner=null;
     currentId=text.trim();
-    if(!gaeste[currentId]) gaeste[currentId]={guthaben:20, warenkorb:[], notiz:""};
+    if(!gaeste[currentId]) gaeste[currentId]={guthaben:0, warenkorb:[], notiz:""};
     showGast();
   });
 }
 
-/* ===== GAST ANZEIGE ===== */
-function showGast(){
+// ===== Gastanzeige =====
+async function showGast(){
   lastActivity=Date.now();
-  const gast=gaeste[currentId];
-  document.getElementById("name").textContent=currentId;
-  document.getElementById("guthaben").textContent=gast.guthaben.toFixed(2);
+  if(!gaeste[currentId]) gaeste[currentId]={guthaben:0, warenkorb:[], notiz:""};
+  const res = await fetch(`${WEBAPP_URL}?action=getGuthaben&sn=${currentId}`);
+  const data = await res.json();
+  gaeste[currentId].guthaben = data.guthaben || 0;
+  document.getElementById("guthaben").textContent = gaeste[currentId].guthaben.toFixed(2);
+  document.getElementById("name").textContent = currentId;
   document.getElementById("gast").style.display="block";
-  document.getElementById("notiz").value=gast.notiz;
+  document.getElementById("notiz").value = gaeste[currentId].notiz;
   renderProdukte();
   updateWarenkorb();
 }
 
-/* ===== PRODUKTE RENDERN (Dropdown-artig 2 Preise) ===== */
-function renderProdukte(){
-  const div=document.getElementById("produkte");
+// ===== Produkte rendern =====
+async function renderProdukte(){
+  const div = document.getElementById("produkte");
   div.innerHTML="";
+  const res = await fetch(`${WEBAPP_URL}?action=getProdukte`);
+  const produkte = await res.json();
   produkte.forEach(p=>{
-    const title=document.createElement("div");
+    const title = document.createElement("div");
     title.className="produkt-titel";
     title.textContent=p.name;
     div.appendChild(title);
 
     for(let i=0;i<p.preise.length;i+=2){
-      const row=document.createElement("div");
+      const row = document.createElement("div");
       row.className="preis-row";
       for(let j=0;j<2 && i+j<p.preise.length;j++){
-        const btn=document.createElement("button");
+        const btn = document.createElement("button");
         btn.className="preis-btn button-orange";
-        btn.textContent=`${p.preise[i+j].toFixed(2)} €`;
-        btn.onclick=()=>{
-          gaeste[currentId].warenkorb.push({name:p.name, preis:p.preise[i+j], menge:1});
-          updateWarenkorb();
-        };
+        btn.textContent = p.preise[i+j].toFixed(2)+" €";
+        btn.onclick = ()=>addToCart(p.name, p.preise[i+j]);
         row.appendChild(btn);
       }
       div.appendChild(row);
@@ -224,45 +190,87 @@ function renderProdukte(){
   });
 }
 
-/* ===== WARENKORB ===== */
+// ===== Warenkorb =====
+function addToCart(name, preis){
+  gaeste[currentId].warenkorb.push({name, preis, menge:1});
+  updateWarenkorb();
+}
+
 function updateWarenkorb(){
   lastActivity=Date.now();
-  const ul=document.getElementById("warenkorb");
+  const ul = document.getElementById("warenkorb");
   ul.innerHTML="";
   let summe=0;
   gaeste[currentId].warenkorb.forEach((item,index)=>{
-    summe+=item.preis*item.menge;
-    const li=document.createElement("li");
+    summe += item.preis*item.menge;
+    const li = document.createElement("li");
     li.innerHTML=`${item.name} – ${item.preis.toFixed(2)} € x${item.menge} 
       <button class="button-green" onclick="plusEins(${index})">+1</button>
       <button class="button-red" onclick="loeschen(${index})">❌</button>`;
     ul.appendChild(li);
   });
-  document.getElementById("summe").textContent=summe.toFixed(2);
+  document.getElementById("summe").textContent = summe.toFixed(2);
 }
 
 function plusEins(index){ gaeste[currentId].warenkorb[index].menge+=1; updateWarenkorb(); }
 function loeschen(index){ gaeste[currentId].warenkorb.splice(index,1); updateWarenkorb(); }
 
-/* ===== AKTIONEN ===== */
-function aufladen(){ lastActivity=Date.now(); const v=parseFloat(prompt("Aufladen (€):","10")); if(v){gaeste[currentId].guthaben+=v; document.getElementById("guthaben").textContent=gaeste[currentId].guthaben.toFixed(2);}}
-function auszahlen(){ lastActivity=Date.now(); if(confirm("Guthaben auszahlen und auf 0 setzen?")){gaeste[currentId].guthaben=0; document.getElementById("guthaben").textContent="0.00";}}
-
-/* ===== BUCHUNG ===== */
-function buchen(){
+// ===== Aktionen =====
+function aufladen(){
   lastActivity=Date.now();
-  const gast=gaeste[currentId];
-  let summe=gast.warenkorb.reduce((acc,i)=>acc+i.preis*i.menge,0);
-  if(summe>gast.guthaben){alert("Nicht genug Guthaben!"); return;}
-  gast.guthaben-=summe;
+  const v = parseFloat(prompt("Aufladen (€):","10"));
+  if(v){
+    fetch(WEBAPP_URL,{
+      method:"POST",
+      body: JSON.stringify({action:"buchung", seriennummer: currentId, aktion:"Aufladen", betrag:v})
+    });
+    gaeste[currentId].guthaben += v;
+    document.getElementById("guthaben").textContent = gaeste[currentId].guthaben.toFixed(2);
+  }
+}
+
+function auszahlen(){
+  lastActivity=Date.now();
+  if(confirm("Guthaben auszahlen und auf 0 setzen?")){
+    fetch(WEBAPP_URL,{
+      method:"POST",
+      body: JSON.stringify({action:"buchung", seriennummer: currentId, aktion:"Auszahlen", betrag:0})
+    });
+    gaeste[currentId].guthaben = 0;
+    document.getElementById("guthaben").textContent = "0.00";
+  }
+}
+
+// ===== Buchung =====
+async function buchen(){
+  lastActivity=Date.now();
+  const gast = gaeste[currentId];
+  const summe = gast.warenkorb.reduce((acc,i)=>acc+i.preis*i.menge,0);
+  if(summe > gast.guthaben){ alert("Nicht genug Guthaben!"); return; }
+
+  for(const item of gast.warenkorb){
+    await fetch(WEBAPP_URL,{
+      method:"POST",
+      body: JSON.stringify({
+        action:"buchung",
+        seriennummer: currentId,
+        aktion:"Buchen",
+        produkt:item.name,
+        betrag:item.preis*item.menge,
+        notiz:gast.notiz
+      })
+    });
+  }
+
+  gast.guthaben -= summe;
   gast.warenkorb=[];
   gast.notiz="";
-  document.getElementById("guthaben").textContent=gast.guthaben.toFixed(2);
+  document.getElementById("guthaben").textContent = gast.guthaben.toFixed(2);
   resetScanner();
   alert("Gebucht!");
 }
 
-/* ===== RESET & NEU SCANNEN ===== */
+// ===== Reset & neu scannen =====
 function resetScanner(){
   document.getElementById("gast").style.display="none";
   currentId="";
@@ -274,15 +282,15 @@ function resetScanner(){
   else startScan();
 }
 
-/* ===== NOTIZ ===== */
-const notiz=document.getElementById("notiz");
-const counter=document.getElementById("notiz-counter");
+// ===== Notiz =====
+const notiz = document.getElementById("notiz");
+const counter = document.getElementById("notiz-counter");
 notiz.addEventListener("input",()=>{
   lastActivity=Date.now();
-  const len=notiz.value.length;
-  counter.textContent=(500-len)+" Zeichen übrig";
-  notiz.style.fontSize=len<=200?"16px":Math.max(8,16-(len-200)/20)+"px";
-  if(currentId) gaeste[currentId].notiz=notiz.value;
+  const len = notiz.value.length;
+  counter.textContent = (500-len)+" Zeichen übrig";
+  notiz.style.fontSize = len<=200?"16px":Math.max(8,16-(len-200)/20)+"px";
+  if(currentId) gaeste[currentId].notiz = notiz.value;
 });
 </script>
 </body>
